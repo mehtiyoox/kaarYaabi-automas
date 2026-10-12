@@ -1,0 +1,227 @@
+{
+  "name": "Emergency Stop / Start Control Subworkflow",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ]
+      },
+      "id": "0",
+      "name": "Listen for /stop and /start commands",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        -400,
+        400
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-bot-creds",
+          "name": "Telegram Bot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-owner",
+              "left": "={{ $json.message.chat.id }}",
+              "right": "={{ $env.YOUR_TELEGRAM_ID }}"
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "1",
+      "name": "Is Message From You?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "stop-command",
+              "left": "={{ $json.message.text }}",
+              "right": "/stop"
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "2",
+      "name": "Command = /stop?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        80,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE system_settings SET value = 'false' WHERE key = 'system_active';"
+      },
+      "id": "3",
+      "name": "Set System to INACTIVE (Stop publishing)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        320,
+        280
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "neon-creds",
+          "name": "Neon PostgreSQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.YOUR_TELEGRAM_ID }}",
+        "text": "🛑 سیستم با موفقیت کاملا متوقف شد. هیچ پست جدیدی منتشر نخواهد شد و هیچ اکشن خودکاری در شبکه‌های اجتماعی انجام نمی‌شود. برای فعال کردن مجدد کافیست /start را ارسال کنید."
+      },
+      "id": "4",
+      "name": "Confirm Stop",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 3,
+      "position": [
+        560,
+        280
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-bot-creds",
+          "name": "Telegram Bot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE system_settings SET value = 'true' WHERE key = 'system_active';"
+      },
+      "id": "5",
+      "name": "Set System to ACTIVE",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        320,
+        520
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "neon-creds",
+          "name": "Neon PostgreSQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.YOUR_TELEGRAM_ID }}",
+        "text": "✅ سیستم با موفقیت دوباره فعال شد. تمام فرآیندهای تولید محتوا، زمان‌بندی، انتشار و پاسخ خودکار به کامنت‌ها از سر گرفته شدند."
+      },
+      "id": "6",
+      "name": "Confirm Start",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 3,
+      "position": [
+        560,
+        520
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-bot-creds",
+          "name": "Telegram Bot account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "0": {
+      "main": [
+        [
+          {
+            "node": "1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1": {
+      "main": [
+        [
+          {
+            "node": "2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "2": {
+      "main": [
+        [
+          {
+            "node": "3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3": {
+      "main": [
+        [
+          {
+            "node": "4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5": {
+      "main": [
+        [
+          {
+            "node": "6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {},
+  "id": "8"
+}

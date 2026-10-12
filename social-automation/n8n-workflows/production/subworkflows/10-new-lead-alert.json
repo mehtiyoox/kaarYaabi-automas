@@ -1,0 +1,60 @@
+{
+  "name": "New Lead Alert Subworkflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "0",
+      "name": "When High Priority Lead Detected",
+      "type": "n8n-nodes-base.start",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.YOUR_TELEGRAM_ID }}",
+        "text": "🚨 لید جدید با اولویت بالا دریافت شد!\n\nپست: {{ $json.post_topic }}\nپلتفرم: {{ $json.platform }}\nنام شخص: {{ $json.commenter_name }}\nپروفایل: {{ $json.profile_url }}\n\nمتن کامنت:\n{{ $json.comment_text }}\n\nهرچه سریعتر به این کامنت پاسخ دهید، نرخ بسته شدن پروژه بسیار بالاتر است.",
+        "reply_markup": {
+          "inline_keyboard": [
+            [
+              {
+                "text": "باز کردن لینک کامنت",
+                "url": "{{ $json.comment_url }}"
+              }
+            ]
+          ]
+        }
+      },
+      "id": "1",
+      "name": "Send Instant Lead Alert to Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 3,
+      "position": [
+        -160,
+        400
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-bot-creds",
+          "name": "Telegram Bot account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "0": {
+      "main": [
+        [
+          {
+            "node": "1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "id": "10"
+}

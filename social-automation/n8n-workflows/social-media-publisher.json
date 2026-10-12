@@ -1,0 +1,278 @@
+{
+  "name": "Social Media Auto Publisher - Mehdi Habibzadeh",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerTimes": {
+                "item": [
+                  {
+                    "hour": 11,
+                    "minute": 30
+                  },
+                  {
+                    "hour": 17,
+                    "minute": 30
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "id": "1",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "table": "scheduled_posts",
+        "limit": 1,
+        "where": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "published_condition",
+                "left": "published",
+                "right": "false"
+              },
+              {
+                "id": "scheduled_time_condition",
+                "left": "scheduled_for",
+                "operator": "before",
+                "right": "={{ $now.toISO() }}"
+              }
+            ],
+            "combinator": "and"
+          }
+        }
+      },
+      "id": "2",
+      "name": "Get Next Scheduled Post",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "2",
+          "name": "Neon PostgreSQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has_post_condition",
+              "left": "={{ $input.item.length }}",
+              "right": 1,
+              "operator": "gte"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "3",
+      "name": "Post Exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -20,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.content_linkedin }}",
+        "attachments": "={{ $json.image_url ? $json.image_url : undefined }}"
+      },
+      "id": "4",
+      "name": "Post to LinkedIn",
+      "type": "n8n-nodes-base.linkedIn",
+      "typeVersion": 2,
+      "position": [
+        220,
+        200
+      ],
+      "credentials": {
+        "linkedInApi": {
+          "id": "3",
+          "name": "LinkedIn account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.content_twitter }}",
+        "attachments": "={{ $json.image_url ? $json.image_url : undefined }}"
+      },
+      "id": "5",
+      "name": "Post to X / Twitter",
+      "type": "@n8n/n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [
+        220,
+        400
+      ],
+      "credentials": {
+        "twitterApi": {
+          "id": "4",
+          "name": "X/Twitter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "table": "scheduled_posts",
+        "columns": {
+          "published": "true",
+          "published_at": "={{ $now.toISO() }}"
+        },
+        "updateKey": "id",
+        "schema": {
+          "id": "={{ $json.id }}"
+        }
+      },
+      "id": "6",
+      "name": "Mark Post as Published",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "2",
+          "name": "Neon PostgreSQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "✅ پست جدید در شبکه‌های اجتماعی منتشر شد:\n\nلینکدین و توییتر/X\nموضوع: {{ $json.topic }}\nزمان انتشار: {{ $now.toFormat('yyyy-MM-dd HH:mm') }}",
+        "additionalFields": {}
+      },
+      "id": "7",
+      "name": "Send Notification to Me",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 2,
+      "position": [
+        700,
+        300
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "5",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "1": {
+      "main": [
+        [
+          {
+            "node": "2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2": {
+      "main": [
+        [
+          {
+            "node": "3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3": {
+      "main": [
+        [
+          {
+            "node": "4",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "5",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "4": {
+      "main": [
+        [
+          {
+            "node": "6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5": {
+      "main": [
+        [
+          {
+            "node": "6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "6": {
+      "main": [
+        [
+          {
+            "node": "7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "7a7f8d9e-1234-5678-90ab-cdef01234567",
+  "id": "8",
+  "tags": []
+}

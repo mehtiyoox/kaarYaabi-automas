@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - TZ=Asia/Tehran
+      - GENERIC_TIMEZONE=Asia/Tehran
+      - N8N_HOST=${N8N_HOST}
+      - N8N_PROTOCOL=https
+      - NODE_ENV=production
+      - WEBHOOK_URL=https://${N8N_HOST}/
+      - N8N_EDITOR_BASE_URL=https://${N8N_HOST}/
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=${PGHOST}
+      - DB_POSTGRESDB_PORT=${PGPORT}
+      - DB_POSTGRESDB_DATABASE=${PGDATABASE}
+      - DB_POSTGRESDB_USER=${PGUSER}
+      - DB_POSTGRESDB_PASSWORD=${PGPASSWORD}
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${ADMIN_USER}
+      - N8N_BASIC_AUTH_PASSWORD=${ADMIN_PASSWORD}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - YOUR_TELEGRAM_ID=${YOUR_TELEGRAM_ID}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - EXECUTIONS_DATA_PRUNE=true
+      - EXECUTIONS_DATA_MAX_AGE=168
+    volumes:
+      - n8n_data:/home/node/.n8n
+    command: n8n start
+
+volumes:
+  n8n_data:

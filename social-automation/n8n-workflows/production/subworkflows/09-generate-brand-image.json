@@ -1,0 +1,91 @@
+{
+  "name": "Generate On-Brand Post Image Subworkflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "0",
+      "name": "When Called from Main Orchestrator",
+      "type": "n8n-nodes-base.start",
+      "typeVersion": 1,
+      "position": [
+        -600,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "command": "cd /opt/social-automation/scripts && python3 generate_post_image.py --hook {{ JSON.stringify($json.hook_text).slice(1, -1) }} --output /opt/social-automation/content/generated/images/post_{{$json.id}}.png",
+        "options": {}
+      },
+      "id": "1",
+      "name": "Run Python Image Generator Script (Cloud Path)",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -360,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "propertyName": "image_path",
+        "propertyValue": "=/opt/social-automation/content/generated/images/post_{{$json.id}}.png"
+      },
+      "id": "2",
+      "name": "Add Image Path to Post Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        -120,
+        400
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "3",
+      "name": "Return Post + Image to Main Workflow",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        120,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "0": {
+      "main": [
+        [
+          {
+            "node": "1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1": {
+      "main": [
+        [
+          {
+            "node": "2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2": {
+      "main": [
+        [
+          {
+            "node": "3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "id": "9"
+}

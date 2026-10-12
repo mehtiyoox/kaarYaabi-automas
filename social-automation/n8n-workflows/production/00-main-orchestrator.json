@@ -1,0 +1,460 @@
+{
+  "name": "Main Orchestrator - Mehdi Habibzadeh Social Content Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerTimes": {
+                "item": [
+                  {
+                    "hour": 8,
+                    "minute": 0
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "id": "0",
+      "name": "Daily Run Trigger (8 AM IR time)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -800,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": "2",
+        "waitForSubWorkflow": true
+      },
+      "id": "1",
+      "name": "Subworkflow 1: Pull Trending Content & Generate Ideas",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        400
+      ],
+      "webhookId": "idea-generation"
+    },
+    {
+      "parameters": {
+        "workflowId": "3",
+        "waitForSubWorkflow": true
+      },
+      "id": "2",
+      "name": "Subworkflow 2: Generate Draft Posts (LinkedIn + X)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        400
+      ],
+      "webhookId": "content-write"
+    },
+    {
+      "parameters": {
+        "workflowId": "4",
+        "waitForSubWorkflow": true
+      },
+      "id": "3",
+      "name": "Subworkflow 3: Quality Score & AI Content Check",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        400
+      ],
+      "webhookId": "quality-check"
+    },
+    {
+      "parameters": {
+        "workflowId": "9",
+        "waitForSubWorkflow": true
+      },
+      "id": "3b",
+      "name": "Subworkflow 3b: Generate On-Brand Post Image",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        40,
+        400
+      ],
+      "webhookId": "generate-image"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "quality-pass",
+              "left": "={{ $json.quality_score }}",
+              "right": 8,
+              "operator": "gte"
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "4",
+      "name": "Quality Score >= 8?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        280,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": "3",
+        "waitForSubWorkflow": true
+      },
+      "id": "5",
+      "name": "Rewrite Post (Retry up to 3 times)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        280,
+        200
+      ],
+      "webhookId": "rewrite",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 10000
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.YOUR_TELEGRAM_ID }}",
+        "text": "📋 پست امروز برای تایید نهایی شما آماده است:\n\nموضوع: {{ $json.topic }}\n\n🔹 نسخه لینکدین:\n{{ $json.content_linkedin }}\n\n🔹 نسخه توییتر/X:\n{{ $json.content_twitter }}\n\nتصویر برند پست هم به این پیام ضمیمه شده است. با دکمه‌های زیر می‌توانید تایید، درخواست ویرایش یا رد کنید.",
+        "replyMarkup": {
+          "inlineKeyboard": [
+            [
+              {
+                "text": "✅ تایید و زمان‌بندی انتشار",
+                "callbackData": "approve_post_{{$json.id}}"
+              },
+              {
+                "text": "✏️ نیاز به ویرایش",
+                "callbackData": "edit_post_{{$json.id}}"
+              },
+              {
+                "text": "❌ رد کردن پست",
+                "callbackData": "reject_post_{{$json.id}}"
+              }
+            ]
+          ]
+        },
+        "attachments": "={{ $json.image_path }}"
+      },
+      "id": "6",
+      "name": "Send Post + Image for Human Approval (Telegram)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 3,
+      "position": [
+        520,
+        400
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-bot-creds",
+          "name": "Telegram Bot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message",
+          "callback_query"
+        ]
+      },
+      "id": "7",
+      "name": "Wait for Your Approval",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        760,
+        400
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-bot-creds",
+          "name": "Telegram Bot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "approved",
+              "left": "={{ $json.callbackQuery.data.startsWith('approve_post') }}",
+              "right": true
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "8",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": "5",
+        "waitForSubWorkflow": false
+      },
+      "id": "9",
+      "name": "Subworkflow: Schedule & Publish to LinkedIn + X (with image)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        1240,
+        320
+      ],
+      "webhookId": "publish"
+    },
+    {
+      "parameters": {
+        "workflowId": "6",
+        "waitForSubWorkflow": false
+      },
+      "id": "10",
+      "name": "Subworkflow: Start Engagement Auto-Reply for this Post",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        1240,
+        480
+      ],
+      "webhookId": "engagement"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.YOUR_TELEGRAM_ID }}",
+        "text": "✅ پست با موفقیت تایید شد و در بهترین زمان پر بازدید منتشر خواهد شد. سیستم به طور خودکار کامنت‌ها را مانیتور می‌کند و در صورت دریافت درخواست پروژه فورا به شما اطلاع می‌دهد."
+      },
+      "id": "11",
+      "name": "Confirm Approval",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 3,
+      "position": [
+        1480,
+        400
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-bot-creds",
+          "name": "Telegram Bot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": "7",
+        "waitForSubWorkflow": true
+      },
+      "id": "12",
+      "name": "Subworkflow: Error Handling & Alert (Global)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        160,
+        600
+      ],
+      "webhookId": "error-handler",
+      "continueOnFail": true,
+      "onError": "regular"
+    }
+  ],
+  "connections": {
+    "0": {
+      "main": [
+        [
+          {
+            "node": "1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1": {
+      "main": [
+        [
+          {
+            "node": "2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2": {
+      "main": [
+        [
+          {
+            "node": "3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3": {
+      "main": [
+        [
+          {
+            "node": "3b",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3b": {
+      "main": [
+        [
+          {
+            "node": "4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4": {
+      "main": [
+        [
+          {
+            "node": "6",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5": {
+      "main": [
+        [
+          {
+            "node": "3b",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "12",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "6": {
+      "main": [
+        [
+          {
+            "node": "7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7": {
+      "main": [
+        [
+          {
+            "node": "8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "8": {
+      "main": [
+        [
+          {
+            "node": "9",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "10",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "9": {
+      "main": [
+        [
+          {
+            "node": "11",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10": {
+      "main": [
+        [
+          {
+            "node": "11",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "errorWorkflow": "7"
+  },
+  "staticData": null,
+  "tags": ["main-orchestrator", "production"],
+  "triggerCount": 0,
+  "updatedAt": "2026-10-12T12:00:00.000Z",
+  "versionId": "production-v1",
+  "id": "1"
+}
