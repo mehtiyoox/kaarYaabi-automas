@@ -11,12 +11,12 @@ RUN mkdir -p /opt/social-automation/assets/brand-style
 RUN mkdir -p /opt/social-automation/content/generated/images
 
 # کپی اسکریپت تولید تصویر
-COPY ../../scripts/generate_post_image.py /opt/social-automation/scripts/
-COPY ../../scripts/requirements.txt /opt/social-automation/scripts/
+COPY scripts/generate_post_image.py /opt/social-automation/scripts/
+COPY scripts/requirements.txt /opt/social-automation/scripts/
 
 # کپی فونت‌ها و منابع استایل برند
-COPY ../../assets/brand-style/*.ttf /opt/social-automation/assets/brand-style/
-COPY ../../assets/brand-style/*.ttc /opt/social-automation/assets/brand-style/
+RUN wget -q https://github.com/rsms/inter/raw/master/docs/font-files/Inter-Bold.otf -O /opt/social-automation/assets/brand-style/Inter-Bold.ttf && \
+    wget -q https://github.com/rsms/inter/raw/master/docs/font-files/Inter-Regular.otf -O /opt/social-automation/assets/brand-style/Inter-Regular.ttf
 
 # نصب پکیج‌های پایتون
 RUN pip3 install --break-system-packages -r /opt/social-automation/scripts/requirements.txt
